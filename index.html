@@ -1148,86 +1148,93 @@ Be extremely specific. Do NOT use generic terms like "furniture present".`;
   // ═══ STEP 2: 70B model does DEEP analysis based on description ═══
   console.log('[QR] STEP 2: 70B model doing deep earthquake analysis...');
   const analysisPrompt = isTR
-    ? `Sen Türkiye'de 20 yıllık deneyime sahip bir deprem güvenliği uzmanı ve AFAD sertifikalı yapı mühendisisin.
+    ? `Sen Türkiye'de 20 yıllık deneyime sahip, AFAD sertifikalı bir deprem güvenliği uzmanısın.
  
-Aşağıda bir ${rl} fotoğrafının detaylı açıklaması var. Bu açıklamayı kullanarak KAPSAMLı bir deprem risk analizi yap.
+Aşağıda bir ${rl} fotoğrafının detaylı açıklaması var:
  
 ═══ ODA AÇIKLAMASI ═══
 ${roomDescription}
 ═══════════════════
  
-ANALİZ TALİMATLARI:
-- 7.4 büyüklüğünde (İstanbul senaryosu) bir depremde bu odada ne olur, adım adım düşün
-- Her eşyanın ağırlığını, yüksekliğini, sabitlenme durumunu değerlendir
-- Devrilme açısını hesapla: Yüksek ve dar mobilyalar daha riskli
-- Cam kırılma riski: Pencere yakınındaki eşyalar, cam kapaklı dolaplar
-- Düşen obje riski: Raf üzerindeki ağır objeler, asılı tablolar
-- Ezilme riski: Ağır mobilyaların yanında uyuma/oturma
-- Kaçış yolu: Kapıya giden yolda engel var mı
-- Güvenli alan: İç duvarlar, sağlam masa altları, pencereden/dolaptan uzak köşeler
+GÖREV: 7.4 büyüklüğünde bir İstanbul depremi senaryosunda bu odayı analiz et.
  
-riskImagePrompt ve safeImagePrompt alanlarını İNGİLİZCE ve ÇOK DETAYLI yaz. Oda açıklamasındaki renkleri, mobilya tiplerini, yerleşimi aynen kullan ki fal.ai gerçekçi görsel üretebilsin.
+KRİTİK KURALLAR:
+1. Her risk için FARKLI ve SPESİFİK açıklama yaz. "Yüksekliği ve ağırlığı nedeniyle devrilme riski" gibi TEKRARLAYAN ifadeler KULLANMA.
+2. Her risk açıklaması şunları içermeli: (a) eşyanın TAHMİNİ boyut/ağırlık bilgisi, (b) NEREYE düşer/devrilir, (c) KİMİ/NEYİ tehlikeye atar, (d) yaralanma tipi (ezilme/kesik/çarpma)
+3. Checklist maddeleri somut olsun: malzeme adı, tahmini maliyet, nereden alınır, nasıl takılır
+4. Saklanma alanları odanın GERÇEk düzenine göre olsun
+5. riskImagePrompt: Oda açıklamasındaki mobilya renklerini, tiplerini, duvar rengini aynen kullan. Deprem anını çok canlı anlat.
+6. safeImagePrompt: Aynı odayı güvenli hale getirilmiş şekilde anlat. Aynı mobilyalar ama sabitlenmiş.
  
-SADECE aşağıdaki JSON formatında yanıt ver:
+Örnek iyi risk açıklaması: "Duvardaki 120cm genişliğindeki düz ekran TV, anti-tip kayışı olmadan TV sehpasında duruyor. 7.4 büyüklüğünde depremde TV öne doğru fırlayarak 2-3 metre uzağa düşebilir. Ekran kırılarak cam parçaları saçılır ve oturma alanındaki kişilere ciddi kesik yaralanmaları verebilir. TV'nin tahmini 15-20 kg ağırlığı düşme anında kafa travmasına neden olabilir."
+ 
+Örnek KÖTÜ risk açıklaması (BUNU YAZMA): "Televizyonun yüksekliği ve ağırlığı, sabitlenmemiş olması nedeniyle devrilme riski yüksek."
+ 
+SADECE JSON döndür:
 {
-  "summary": "3-4 cümle: Odanın genel risk değerlendirmesi. Hangi eşyalar en tehlikeli ve neden.",
-  "roomDesc": "Odanın kısa ama net açıklaması (fal.ai için kullanılacak)",
-  "riskImagePrompt": "IN ENGLISH: Very detailed prompt for fal.ai. Describe this exact room (use colors, furniture types from description) during violent shaking. Which items fall, tip over, shatter. Include specific details like 'tall dark bookshelf tipping forward, books scattered, TV screen cracked on floor, glass window shattered, ceiling light swinging violently'. Make it vivid and photorealistic.",
-  "safeImagePrompt": "IN ENGLISH: Very detailed prompt for fal.ai. Same room but reorganized for safety. Describe specific changes: 'bookshelf anchored to wall with L-brackets, TV secured with anti-tip strap, heavy items moved to lower shelves, clear pathway to door, emergency kit near entrance'. Keep same room colors and style.",
+  "summary": "4-5 cümle. Odanın genel görünümü, en büyük 2-3 tehlike ve neden ciddi oldukları.",
+  "roomDesc": "Odanın 2-3 cümlelik açıklaması: mobilya tipleri, renkler, yerleşim düzeni",
+  "riskImagePrompt": "IN ENGLISH ONLY. Start with room style/colors from description. Then describe earthquake damage in detail. Example format: 'A modern living room with gray L-shaped sofa and walnut wood TV console, during violent 7.4 earthquake, the tall bookshelf has tipped forward scattering books across the gray carpet, flat screen TV flung off the console lying face-down with cracked screen, glass coffee table shattered into pieces, curtain rod fallen from the wall, ceiling pendant light swinging wildly, fine dust and debris in the air, dramatic photorealistic interior photography'",
+  "safeImagePrompt": "IN ENGLISH ONLY. Same room style but safe. Example: 'Same modern living room, tall bookshelf now anchored to wall with steel L-brackets visible, TV secured with anti-tip strap to wall mount, tempered glass coffee table replaced with rounded-edge wood table, heavy books moved to lower shelves, clear wide pathway to exit door, small emergency backpack placed near entrance, anti-slip pads under decorative items, clean organized safe interior photography'",
   "risks": [
-    {"icon": "emoji", "title": "Spesifik risk başlığı", "desc": "Bu eşya neden tehlikeli? Ağırlığı, yüksekliği, sabitlenme durumu. 7.4 depremde ne olur? 3-4 cümle yaz.", "severity": "high veya medium"}
+    {"icon": "📺", "title": "Eşyanın adı + risk tipi", "desc": "4-5 cümle. Eşyanın boyutu/ağırlığı, nereye düşer, kimi tehlikeye atar, yaralanma tipi. HER RİSK İÇİN FARKLI AÇIKLAMA.", "severity": "high veya medium"}
   ],
   "checklist": [
-    {"text": "Somut aksiyon: Hangi eşya + nasıl sabitlenecek + hangi malzeme (L-braketi, anti-tip kayışı, deprem tutucusu, müze macunu vb.)", "priority": "high veya medium"}
+    {"text": "Eşya adı + aksiyon + malzeme + maliyet. Örnek: 'TV'yi duvara VESA uyumlu askı aparatı ile monte et (Tekzen/Koçtaş, ~150-300₺). Veya anti-tip kayışı kullan (~50-100₺)'", "priority": "high veya medium"}
   ],
   "shelter": {
-    "best": "En güvenli nokta (spesifik konum)", "bestDesc": "Neden güvenli: pencereden uzaklık, üstte düşecek eşya yok, sağlam duvar desteği vb. 2-3 cümle.",
-    "second": "İkinci seçenek", "secondDesc": "Neden güvenli",
-    "third": "Üçüncü seçenek", "thirdDesc": "Neden güvenli",
-    "avoid": ["Tehlikeli nokta 1 — somut neden (hangi eşya devrilir/düşer)", "Nokta 2 — neden", "Nokta 3 — neden", "Nokta 4 — neden"]
+    "best": "Odadaki en güvenli nokta", "bestDesc": "3 cümle: Pencereden kaç metre uzak, üstte ne var (düşecek eşya yok mu), duvar tipi (taşıyıcı/bölme)",
+    "second": "İkinci seçenek", "secondDesc": "2 cümle neden güvenli",
+    "third": "Üçüncü seçenek", "thirdDesc": "2 cümle neden güvenli",
+    "avoid": ["Nokta — somut tehlike: hangi eşya devrilir/düşer ve ne tür yaralanma olur", "Nokta 2", "Nokta 3", "Nokta 4"]
   },
-  "riskMarkers": [{"label": "3-5 kelime", "x": 8-92, "y": 8-92}],
-  "safeMarkers": [{"label": "3-5 kelime", "x": 8-92, "y": 8-92}]
+  "riskMarkers": [{"label": "3-4 kelime", "x": 20, "y": 30}],
+  "safeMarkers": [{"label": "3-4 kelime", "x": 20, "y": 30}]
 }
  
-TAM 5 risk (en az 3 tanesi "high"), TAM 5 checklist, TAM 3 riskMarker, TAM 3 safeMarker.`
+TAM 5 farklı risk, TAM 5 farklı checklist, TAM 3 riskMarker, TAM 3 safeMarker.
+x/y: 8-92 arası, eşyanın fotoğraftaki tahmini konumuna göre.`
     : `You are a certified structural engineer with 20 years of earthquake safety experience.
  
-Below is a detailed description of a ${rl}. Perform a COMPREHENSIVE earthquake risk analysis.
+Below is a detailed description of a ${rl}:
  
 ═══ ROOM DESCRIPTION ═══
 ${roomDescription}
 ════════════════════════
  
-Analyze for a 7.4 magnitude earthquake (Istanbul scenario). Think step by step about each item.
-Write riskImagePrompt and safeImagePrompt in VERY DETAILED English using exact room details.
+Analyze for a 7.4 magnitude earthquake (Istanbul scenario).
  
-Return ONLY this JSON:
+CRITICAL RULES:
+1. Each risk MUST have a UNIQUE, SPECIFIC description. Do NOT repeat phrases like "due to height and weight, tipping risk is high".
+2. Each risk description must include: (a) estimated size/weight, (b) WHERE it falls, (c) WHO it endangers, (d) injury type
+3. Checklist items must include specific materials, costs, installation method
+4. Image prompts must use exact room colors/furniture from the description
+5. Include "no text, no labels, no watermarks" in image prompts
+ 
+Return ONLY JSON with EXACTLY 5 unique risks, 5 checklist items, 3 markers each.
 {
-  "summary": "3-4 sentences about overall risk",
-  "roomDesc": "Brief room description for image generation",
-  "riskImagePrompt": "Very detailed English fal.ai prompt using room colors/furniture from description",
-  "safeImagePrompt": "Very detailed English fal.ai prompt for safe version of same room",
-  "risks": [{"icon":"emoji","title":"Specific risk","desc":"Why dangerous, 3-4 sentences with weight/height/anchoring details","severity":"high or medium"}],
-  "checklist": [{"text":"Specific action with tool/material needed","priority":"high or medium"}],
-  "shelter": {"best":"...","bestDesc":"2-3 sentences why safe","second":"...","secondDesc":"...","third":"...","thirdDesc":"...","avoid":["Spot — specific reason","...","...","..."]},
-  "riskMarkers": [{"label":"3-5 words","x":30,"y":40}],
-  "safeMarkers": [{"label":"3-5 words","x":30,"y":40}]
-}
- 
-EXACTLY 5 risks (at least 3 "high"), 5 checklist, 3 riskMarkers, 3 safeMarkers.`;
+  "summary": "4-5 sentences",
+  "roomDesc": "2-3 sentences with colors, furniture types, layout",
+  "riskImagePrompt": "Detailed English prompt starting with room style/colors, then earthquake damage. Include 'photorealistic interior photography, no text, no labels'",
+  "safeImagePrompt": "Same room but safe, with visible safety improvements. Include 'photorealistic interior photography, no text, no labels'",
+  "risks": [{"icon":"emoji","title":"Item + risk type","desc":"4-5 unique sentences per risk","severity":"high or medium"}],
+  "checklist": [{"text":"Item + action + material + cost estimate","priority":"high or medium"}],
+  "shelter": {"best":"...","bestDesc":"3 sentences","second":"...","secondDesc":"...","third":"...","thirdDesc":"...","avoid":["Spot — specific danger","...","...","..."]},
+  "riskMarkers": [{"label":"3-4 words","x":20,"y":30}],
+  "safeMarkers": [{"label":"3-4 words","x":20,"y":30}]
+}`;
  
   const analysisMessages = [
     { role: 'system', content: isTR
-      ? 'Sen deprem güvenliği uzmanısın. Verilen oda açıklamasına göre kapsamlı risk analizi yapıyorsun. SADECE JSON döndür.'
-      : 'You are an earthquake safety expert. Analyze the room description comprehensively. Return ONLY JSON.' },
+      ? 'Sen deprem güvenliği uzmanısın. KRİTİK: Her risk için BENZERSİZ ve DETAYLI açıklama yaz. Aynı cümleleri tekrarlama. Eşyanın boyutu, ağırlığı, nereye düşeceği, yaralanma tipini açıkla. SADECE JSON döndür, başka bir şey yazma.'
+      : 'You are an earthquake expert. CRITICAL: Write UNIQUE detailed descriptions for each risk. Never repeat phrases. Include size, weight, fall direction, injury type. Return ONLY JSON.' },
     { role: 'user', content: analysisPrompt }
   ];
  
   const analysisRaw = await groqChat(analysisMessages, {
     model: GROQ_CHAT_MODEL,
     temperature: 0.3,
-    max_tokens: 3000
+    max_tokens: 4000
   });
  
   if (!analysisRaw) {
@@ -1333,8 +1340,10 @@ async function generateImages(roomLabel) {
     imgs[0].src = appState.originalImageDataUrl; imgs[0].style.cssText = '';
   }
   const baseDesc = analysis?.roomDesc || roomLabel || 'living room';
-  const riskPrompt = analysis?.riskImagePrompt || `${baseDesc}. Same room during a strong earthquake, furniture tipping, objects falling, realistic interior photo.`;
-  const safePrompt = analysis?.safeImagePrompt || `${baseDesc}. Same room rearranged for earthquake safety, anchored furniture, clear pathway, realistic interior photo.`;
+  const riskRaw = analysis?.riskImagePrompt || `${baseDesc}. Same room during a strong earthquake, furniture tipping, objects falling, realistic interior photo.`;
+  const riskPrompt = `photorealistic interior photograph, ${riskRaw}, professional photography, 4k, detailed, no text overlay, no labels, no watermarks`;
+  const safeRaw = analysis?.safeImagePrompt || `${baseDesc}. Same room rearranged for earthquake safety, anchored furniture, clear pathway, realistic interior photo.`;
+  const safePrompt = `photorealistic interior photograph, ${safeRaw}, professional photography, 4k, detailed, no text overlay, no labels, no watermarks`;
   try {
     const [riskUrl, safeUrl] = await Promise.all([
       falGenerate(riskPrompt, selectedQuality),
@@ -1610,7 +1619,16 @@ function showScreen(id){
   else{document.getElementById('chat-fab').classList.remove('show');if(chatOpen)toggleChat();}
 }
 function toggleCheck(item){item.classList.toggle('checked');}
-function goBack(){showScreen('screen-upload');}
+function goBack(){
+  // Clear previous analysis
+  const th = document.getElementById('preview-thumb');
+  if (th) { th.src = ''; th.style.display = 'none'; }
+  const fi = document.getElementById('file-input');
+  if (fi) fi.value = '';
+  appState.originalImageDataUrl = null;
+  appState.latestAnalysis = null;
+  showScreen('screen-upload');
+}
 function openDrawer(panel){
   document.getElementById('drawer-overlay').classList.add('open');
   document.getElementById('settings-drawer').classList.add('open');
@@ -1700,6 +1718,74 @@ zone.addEventListener('drop',e=>{
   const dt=new DataTransfer();dt.items.add(file);document.getElementById('file-input').files=dt.files;
   const r=new FileReader();r.onload=ev=>{document.getElementById('preview-thumb').src=ev.target.result;document.getElementById('preview-thumb').style.display='block';appState.originalImageDataUrl=ev.target.result;};r.readAsDataURL(file);
 });
+ 
+// ── PDF DOWNLOAD ──
+async function downloadPDF() {
+  const a = appState.latestAnalysis;
+  if (!a) { showToast(currentLang==='tr'?'⚠️ Önce analiz yapın':'⚠️ Analyze first'); return; }
+  showToast(currentLang==='tr'?'📄 PDF oluşturuluyor...':'📄 Generating PDF...');
+  const isTR = currentLang === 'tr';
+ 
+  const riskRows = a.risks.map(r =>
+    `<tr><td style="padding:8px;border:1px solid #ddd">${r.icon} ${r.t}</td><td style="padding:8px;border:1px solid #ddd">${r.d}</td><td style="padding:8px;border:1px solid #ddd;text-align:center"><span style="background:${r.s==='high'?'#ff4d2e':'#fbbf24'};color:white;padding:2px 8px;border-radius:4px;font-size:12px">${r.s==='high'?(isTR?'KRİTİK':'CRITICAL'):(isTR?'ORTA':'MEDIUM')}</span></td></tr>`
+  ).join('');
+ 
+  const checkRows = a.checklist.map(c =>
+    `<tr><td style="padding:8px;border:1px solid #ddd">☐ ${c.t}</td><td style="padding:8px;border:1px solid #ddd;text-align:center"><span style="background:${c.p==='high'?'#ff4d2e':'#fbbf24'};color:white;padding:2px 8px;border-radius:4px;font-size:12px">${c.p==='high'?(isTR?'ÖNCELİKLİ':'HIGH'):(isTR?'ORTA':'MEDIUM')}</span></td></tr>`
+  ).join('');
+ 
+  const avoidList = (a.shelter.avoid||[]).map(x => `<li style="margin:4px 0">${x}</li>`).join('');
+ 
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>QuakeReady ${isTR?'Rapor':'Report'}</title>
+  <style>body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:30px;color:#222}
+  h1{color:#ff4d2e;border-bottom:3px solid #ff4d2e;padding-bottom:10px}
+  h2{color:#333;margin-top:28px;border-left:4px solid #ff4d2e;padding-left:10px}
+  table{width:100%;border-collapse:collapse;margin:12px 0}
+  .safe-box{background:#e8f5e9;border:2px solid #22c55e;border-radius:10px;padding:18px;margin:12px 0}
+  .warn-box{background:#fff3e0;border:2px solid #ff4d2e;border-radius:10px;padding:18px;margin:12px 0}
+  .footer{margin-top:40px;padding-top:15px;border-top:2px solid #ddd;font-size:12px;color:#888;text-align:center}</style></head>
+  <body>
+  <h1>🔴 QuakeReady ${isTR?'Deprem Güvenliği Raporu':'Earthquake Safety Report'}</h1>
+  <p style="color:#666">${new Date().toLocaleDateString(isTR?'tr-TR':'en-US',{year:'numeric',month:'long',day:'numeric'})} · ${isTR?'Yapay Zeka Analizi':'AI Analysis'}</p>
+ 
+  <h2>📋 ${isTR?'Özet':'Summary'}</h2>
+  <p style="font-size:15px;line-height:1.7;background:#f5f5f5;padding:15px;border-radius:8px">${a.summary}</p>
+ 
+  <h2>⚠️ ${isTR?'Tespit Edilen Riskler':'Identified Risks'}</h2>
+  <table><tr style="background:#ff4d2e;color:white"><th style="padding:10px;text-align:left">${isTR?'Risk':'Risk'}</th><th style="padding:10px;text-align:left">${isTR?'Açıklama':'Description'}</th><th style="padding:10px">${isTR?'Seviye':'Level'}</th></tr>${riskRows}</table>
+ 
+  <h2>🛡️ ${isTR?'Güvenli Saklanma Alanları':'Safe Shelter Areas'}</h2>
+  <div class="safe-box">
+    <p><strong>🏆 ${isTR?'En İyi':'Best'}:</strong> ${a.shelter.best} — ${a.shelter.bestDesc}</p>
+    <p><strong>2.</strong> ${a.shelter.second} — ${a.shelter.secondDesc}</p>
+    <p><strong>3.</strong> ${a.shelter.third} — ${a.shelter.thirdDesc}</p>
+  </div>
+  <div class="warn-box">
+    <p><strong>⚠️ ${isTR?'Kesinlikle Gitme':'Never Go To'}:</strong></p>
+    <ul>${avoidList}</ul>
+  </div>
+ 
+  <h2>🎯 ${isTR?'Yapılması Gerekenler':'Action Checklist'}</h2>
+  <table><tr style="background:#22c55e;color:white"><th style="padding:10px;text-align:left">${isTR?'Aksiyon':'Action'}</th><th style="padding:10px">${isTR?'Öncelik':'Priority'}</th></tr>${checkRows}</table>
+ 
+  <h2>🧎 ${isTR?'Deprem Anında':'During Earthquake'}</h2>
+  <div class="safe-box">
+    <p style="font-size:20px;font-weight:bold;text-align:center">1. ÇÖK → 2. KAPAN → 3. TUTUN</p>
+    <p style="text-align:center">${isTR?'Sarsıntı tamamen duruncaya kadar pozisyonunu koru.':'Maintain position until shaking completely stops.'}</p>
+  </div>
+ 
+  <div class="footer">
+    <p>QuakeReady · ${isTR?'Yapay Zeka Destekli Deprem Güvenliği':'AI-Powered Earthquake Safety'}</p>
+    <p>${isTR?'Bu rapor yalnızca bilgilendirme amaçlıdır. Profesyonel mühendislik danışmanlığının yerini tutmaz.':'This report is for informational purposes only. It does not replace professional engineering consultation.'}</p>
+  </div>
+  </body></html>`;
+ 
+  // Open in new window for printing
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => { w.print(); }, 500);
+}
  
 // ── LANGUAGE ──
 function setLang(lang) {
@@ -1793,6 +1879,63 @@ function setLang(lang) {
 }
  
 console.log('[QR] ✅ QuakeReady loaded with Groq AI');
+ 
+// ═══ DOM FIXES (run after page loads) ═══
+document.addEventListener('DOMContentLoaded', () => {
+ 
+  // FIX 6: Replace Cloudflare email-protected spans with real fake emails
+  document.querySelectorAll('.__cf_email__').forEach(el => {
+    const parent = el.closest('a') || el.parentElement;
+    if (parent) parent.style.pointerEvents = 'none';
+  });
+  // Fix Google account emails
+  const accountItems = document.querySelectorAll('.account-item');
+  if (accountItems[0]) {
+    const p0 = accountItems[0].querySelector('.account-info p');
+    if (p0) p0.textContent = 'ahmet.yilmaz@gmail.com';
+  }
+  if (accountItems[1]) {
+    const p1 = accountItems[1].querySelector('.account-info p');
+    if (p1) p1.textContent = 'zeynep.kaya@gmail.com';
+  }
+  // Fix Apple account email
+  const appleItems = document.querySelectorAll('#modal-account-apple .account-item');
+  if (appleItems[0]) {
+    const pa = appleItems[0].querySelector('.account-info p');
+    if (pa) pa.textContent = 'mert.demir@icloud.com';
+  }
+  console.log('[QR] ✅ Email displays fixed');
+ 
+  // FIX 5: PDF button click handler
+  const pdfBtn = document.querySelector('.btn-primary');
+  if (pdfBtn && pdfBtn.textContent.includes('PDF')) {
+    pdfBtn.onclick = (e) => { e.preventDefault(); downloadPDF(); };
+  }
+  // Also catch by id
+  const pdfSpan = document.getElementById('btn-pdf');
+  if (pdfSpan && pdfSpan.parentElement) {
+    pdfSpan.parentElement.onclick = (e) => { e.preventDefault(); downloadPDF(); };
+  }
+  console.log('[QR] ✅ PDF button handler attached');
+ 
+  // FIX 2: Make Çök-Kapan-Tutun image smaller
+  const posImg = document.querySelector('.position-section img');
+  if (posImg) {
+    posImg.style.maxHeight = '280px';
+    posImg.style.width = 'auto';
+    posImg.style.margin = '0 auto';
+    posImg.style.display = 'block';
+    posImg.style.objectFit = 'contain';
+    // Also fix parent container
+    const imgParent = posImg.closest('div');
+    if (imgParent) {
+      imgParent.style.textAlign = 'center';
+      imgParent.style.maxHeight = '300px';
+      imgParent.style.overflow = 'hidden';
+    }
+  }
+  console.log('[QR] ✅ Position image resized');
+});
 </script>
 </body>
 </html>
