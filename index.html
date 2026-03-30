@@ -1838,8 +1838,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Emails are now directly in HTML, no Cloudflare fix needed
 
   // FIX 5: PDF button click handler
-  const pdfBtn = document.querySelector('.btn-primary');
-  if (pdfBtn && pdfBtn.textContent.includes('PDF')) {
+  const pdfBtn = document.querySelector('.btn-primary-sm');
+  if (pdfBtn) {
     pdfBtn.onclick = (e) => { e.preventDefault(); downloadPDF(); };
   }
   // Also catch by id
@@ -1851,6 +1851,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Position image removed from new design (using card layout instead)
 });
+
+// ── Tab switching for results ──
+function switchResultTab(tabId) {
+  document.querySelectorAll('.result-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.result-tab-content').forEach(c => c.classList.remove('active'));
+  const btn = document.querySelector(`[data-tab="${tabId}"]`);
+  const content = document.getElementById(`tab-${tabId}`);
+  if (btn) btn.classList.add('active');
+  if (content) content.classList.add('active');
+}
+
+// ── Risk Score Calculation ──
+function calculateRiskScore(analysis) {
+  if (!analysis) return 0;
+  const highCount = analysis.risks.filter(r => r.s === 'high').length;
+  const medCount = analysis.risks.filter(r => r.s === 'medium').length;
+  return Math.min(100, highCount * 18 + medCount * 8 + 10);
+}
+
+// ── Share Results ──
+async function shareResults() {
+  const a = appState.latestAnalysis;
+  if (!a) return;
+  const isTR = currentLang === 'tr';
+  const text = isTR
+    ? `🔴 QuakeReady Deprem Analizi\n\n${a.summary}\n\n⚠️ Riskler:\n${a.risks.map(r=>'• '+r.t).join('\n')}\n\n🛡️ En güvenli alan: ${a.shelter.best}`
+    : `🔴 QuakeReady Analysis\n\n${a.summary}\n\nRisks:\n${a.risks.map(r=>'• '+r.t).join('\n')}\n\nSafest: ${a.shelter.best}`;
+  if (navigator.share) {
+    try { await navigator.share({ title: 'QuakeReady', text }); } catch(e) {}
+  } else {
+    await navigator.clipboard.writeText(text);
+    showToast(isTR ? '📋 Panoya kopyalandı!' : '📋 Copied!');
+  }
+}
 
 </script>
 </body>
