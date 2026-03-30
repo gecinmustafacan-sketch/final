@@ -1103,77 +1103,144 @@ async function analyzeRoomWithAI(roomId, b64, mime) {
   const roomLabels = {tr:{salon:'salon',yatak:'yatak odası',mutfak:'mutfak',cocuk:'çocuk odası'},en:{salon:'living room',yatak:'bedroom',mutfak:'kitchen',cocuk:"children's room"}};
   const rl = (roomLabels[currentLang] || roomLabels.tr)[roomId] || 'oda';
  
-  const systemPrompt = isTR
-    ? `Sen Türkiye'de deprem güvenliği konusunda 20 yıllık deneyime sahip bir yapı mühendisi ve AFAD uzmanısın. QuakeReady uygulaması için oda fotoğraflarını analiz ediyorsun.
+  // ═══ STEP 1: Vision model ONLY describes the room ═══
+  console.log('[QR] STEP 1: Vision model describing room...');
+  const visionPrompt = isTR
+    ? `Bu bir ${rl} fotoğrafı. Fotoğrafta gördüğün HER ŞEYİ çok detaylı listele:
  
-Analiz kuralların:
-- Fotoğraftaki HER eşyayı tek tek incele (mobilya, elektronik, raf, dekorasyon, pencere, aydınlatma)
-- Türkiye'deki deprem gerçeklerine göre değerlendir (7+ büyüklüğünde deprem senaryosu)
-- Devrilme, düşme, kırılma, ezilme risklerini ayrı ayrı belirt
-- Eşyanın ağırlığına, yüksekliğine ve sabitlenme durumuna göre severity belirle
-- Saklanma alanını odanın gerçek düzenine göre öner
-- riskImagePrompt ve safeImagePrompt çok detaylı ve İNGİLİZCE olsun
+1. MOBİLYALAR: Her mobilyanın tipi, boyutu, rengi, konumu (örn: "sol duvarda koyu kahverengi yüksek kitaplık, yaklaşık 180cm, duvara sabitlenmemiş görünüyor")
+2. ELEKTRONİK: TV, bilgisayar, lamba vb. ve sabitlenme durumları
+3. DEKORASYON: Tablolar, vazolar, biblo, saat vb. ve nerede oldukları
+4. PENCERELER: Konumu, boyutu, perde tipi
+5. KAPILAR: Konumu, açılış yönü
+6. ZEMİN: Halı, parke vb.
+7. DUVARLAR: Renk, raf var mı
+8. AYDINLATMA: Avize, lamba tipi
+9. GENEL YERLEŞİM: Eşyalar nasıl dizilmiş, aralarında ne kadar boşluk var
  
-SADECE JSON formatında yanıt ver. Başka hiçbir şey yazma.`
-    : `You are a structural engineer with 20 years of earthquake safety experience analyzing room photos for QuakeReady.
+Çok detaylı ve spesifik ol. "Mobilya var" gibi genel ifadeler KULLANMA.`
+    : `This is a ${rl} photo. List EVERYTHING you see in extreme detail:
  
-Rules:
-- Examine EVERY item (furniture, electronics, shelves, decor, windows, lighting)
-- Evaluate for 7+ magnitude earthquake scenario
-- Assess tipping, falling, shattering, crushing risks separately
-- Determine severity by weight, height, anchoring status
-- Suggest shelter based on actual room layout
-- Make image prompts very detailed in English for fal.ai
+1. FURNITURE: Type, size, color, position, anchoring status of each piece
+2. ELECTRONICS: TV, computer, lamps etc. and if secured
+3. DECORATIONS: Paintings, vases, objects and their locations
+4. WINDOWS: Position, size, curtain type
+5. DOORS: Position, opening direction
+6. FLOOR: Carpet, hardwood etc.
+7. WALLS: Color, shelves
+8. LIGHTING: Chandelier, lamp types
+9. LAYOUT: How items are arranged, spacing between them
  
-Return ONLY JSON. Nothing else.`;
+Be extremely specific. Do NOT use generic terms like "furniture present".`;
  
-  const userPrompt = isTR
-    ? `Bu bir ${rl} fotoğrafı. Fotoğrafı ÇOK DİKKATLİ incele. Her eşyayı tek tek gör ve deprem senaryosunda ne olacağını düşün.
+  const roomDescription = await groqVision(
+    'Sen bir oda analiz uzmanısın. Fotoğraftaki her detayı listelemelisin. Sadece gördüklerini yaz, yorum yapma.',
+    visionPrompt, b64, mime
+  );
  
-ÖNEMLİ: Genel cevap VERME. Fotoğraftaki GERÇEK eşyalara göre SPESİFİK analiz yap.
+  if (!roomDescription) {
+    console.error('[QR] STEP 1 FAILED: Vision model returned null');
+    return null;
+  }
+  console.log('[QR] STEP 1 OK: Room description length:', roomDescription.length);
+  console.log('[QR] Room description preview:', roomDescription.slice(0, 200));
  
-JSON formatında döndür:
+  // ═══ STEP 2: 70B model does DEEP analysis based on description ═══
+  console.log('[QR] STEP 2: 70B model doing deep earthquake analysis...');
+  const analysisPrompt = isTR
+    ? `Sen Türkiye'de 20 yıllık deneyime sahip bir deprem güvenliği uzmanı ve AFAD sertifikalı yapı mühendisisin.
+ 
+Aşağıda bir ${rl} fotoğrafının detaylı açıklaması var. Bu açıklamayı kullanarak KAPSAMLı bir deprem risk analizi yap.
+ 
+═══ ODA AÇIKLAMASI ═══
+${roomDescription}
+═══════════════════
+ 
+ANALİZ TALİMATLARI:
+- 7.4 büyüklüğünde (İstanbul senaryosu) bir depremde bu odada ne olur, adım adım düşün
+- Her eşyanın ağırlığını, yüksekliğini, sabitlenme durumunu değerlendir
+- Devrilme açısını hesapla: Yüksek ve dar mobilyalar daha riskli
+- Cam kırılma riski: Pencere yakınındaki eşyalar, cam kapaklı dolaplar
+- Düşen obje riski: Raf üzerindeki ağır objeler, asılı tablolar
+- Ezilme riski: Ağır mobilyaların yanında uyuma/oturma
+- Kaçış yolu: Kapıya giden yolda engel var mı
+- Güvenli alan: İç duvarlar, sağlam masa altları, pencereden/dolaptan uzak köşeler
+ 
+riskImagePrompt ve safeImagePrompt alanlarını İNGİLİZCE ve ÇOK DETAYLI yaz. Oda açıklamasındaki renkleri, mobilya tiplerini, yerleşimi aynen kullan ki fal.ai gerçekçi görsel üretebilsin.
+ 
+SADECE aşağıdaki JSON formatında yanıt ver:
 {
-  "summary": "Fotoğraftaki odayı 2-3 cümleyle özetle, HANGİ eşyaların risk oluşturduğunu SOMUT belirt",
-  "roomDesc": "Odanın detaylı açıklaması: hangi eşyalar var, nasıl yerleştirilmiş, pencere/kapı konumları",
-  "riskImagePrompt": "IN ENGLISH ONLY: Very detailed prompt for fal.ai describing THIS EXACT room during a 7.0 earthquake. Describe specific furniture tipping, items falling, glass breaking. Include room colors, furniture types, layout details you see in the photo. Be very descriptive.",
-  "safeImagePrompt": "IN ENGLISH ONLY: Very detailed prompt for fal.ai describing THIS EXACT room safely rearranged. Same furniture but anchored, secured, reorganized. Include room colors and style from photo. Be very descriptive.",
+  "summary": "3-4 cümle: Odanın genel risk değerlendirmesi. Hangi eşyalar en tehlikeli ve neden.",
+  "roomDesc": "Odanın kısa ama net açıklaması (fal.ai için kullanılacak)",
+  "riskImagePrompt": "IN ENGLISH: Very detailed prompt for fal.ai. Describe this exact room (use colors, furniture types from description) during violent shaking. Which items fall, tip over, shatter. Include specific details like 'tall dark bookshelf tipping forward, books scattered, TV screen cracked on floor, glass window shattered, ceiling light swinging violently'. Make it vivid and photorealistic.",
+  "safeImagePrompt": "IN ENGLISH: Very detailed prompt for fal.ai. Same room but reorganized for safety. Describe specific changes: 'bookshelf anchored to wall with L-brackets, TV secured with anti-tip strap, heavy items moved to lower shelves, clear pathway to door, emergency kit near entrance'. Keep same room colors and style.",
   "risks": [
-    {"icon": "uygun emoji", "title": "Fotoğraftaki spesifik eşyaya göre risk başlığı", "desc": "Bu eşyanın depremde NASIL tehlikeli olduğunu 2-3 cümleyle açıkla. Ağırlık, yükseklik, sabitlenme durumunu belirt.", "severity": "high (ağır/yüksek/sabitlenmemiş) veya medium (hafif/düşük)"}
+    {"icon": "emoji", "title": "Spesifik risk başlığı", "desc": "Bu eşya neden tehlikeli? Ağırlığı, yüksekliği, sabitlenme durumu. 7.4 depremde ne olur? 3-4 cümle yaz.", "severity": "high veya medium"}
   ],
   "checklist": [
-    {"text": "Somut aksiyon: HANGİ eşya, NASIL sabitlenecek, NE kullanılacak (L-braketi, anti-tip kayışı vb.)", "priority": "high veya medium"}
+    {"text": "Somut aksiyon: Hangi eşya + nasıl sabitlenecek + hangi malzeme (L-braketi, anti-tip kayışı, deprem tutucusu, müze macunu vb.)", "priority": "high veya medium"}
   ],
   "shelter": {
-    "best": "Bu odadaki en güvenli nokta (fotoğrafa göre spesifik)", "bestDesc": "Neden güvenli: 2 cümle, pencereden/dolaptan uzaklık vb.",
-    "second": "İkinci güvenli nokta", "secondDesc": "Neden",
-    "third": "Üçüncü seçenek", "thirdDesc": "Neden",
-    "avoid": ["Tehlikeli nokta 1 — nedeniyle birlikte", "Tehlikeli nokta 2 — nedeniyle", "Tehlikeli nokta 3 — nedeniyle", "Tehlikeli nokta 4 — nedeniyle"]
+    "best": "En güvenli nokta (spesifik konum)", "bestDesc": "Neden güvenli: pencereden uzaklık, üstte düşecek eşya yok, sağlam duvar desteği vb. 2-3 cümle.",
+    "second": "İkinci seçenek", "secondDesc": "Neden güvenli",
+    "third": "Üçüncü seçenek", "thirdDesc": "Neden güvenli",
+    "avoid": ["Tehlikeli nokta 1 — somut neden (hangi eşya devrilir/düşer)", "Nokta 2 — neden", "Nokta 3 — neden", "Nokta 4 — neden"]
   },
-  "riskMarkers": [{"label": "3-4 kelimelik etiket", "x": 30, "y": 40}],
-  "safeMarkers": [{"label": "3-4 kelimelik etiket", "x": 30, "y": 40}]
+  "riskMarkers": [{"label": "3-5 kelime", "x": 8-92, "y": 8-92}],
+  "safeMarkers": [{"label": "3-5 kelime", "x": 8-92, "y": 8-92}]
 }
  
-TAM 5 risk, TAM 5 checklist, TAM 3 riskMarker, TAM 3 safeMarker üret.
-x/y değerleri fotoğraftaki eşyanın GERÇEK konumuna yakın olsun (8-92).
-severity: Ağır mobilya/yüksek dolap/sabitlenmemiş TV = "high". Hafif dekor/düşük raf = "medium".`
-    : `This is a ${rl} photo. Analyze based on actual items visible.
+TAM 5 risk (en az 3 tanesi "high"), TAM 5 checklist, TAM 3 riskMarker, TAM 3 safeMarker.`
+    : `You are a certified structural engineer with 20 years of earthquake safety experience.
  
-Return ONLY this JSON (5 risks, 5 checklist items, 3 markers each):
+Below is a detailed description of a ${rl}. Perform a COMPREHENSIVE earthquake risk analysis.
+ 
+═══ ROOM DESCRIPTION ═══
+${roomDescription}
+════════════════════════
+ 
+Analyze for a 7.4 magnitude earthquake (Istanbul scenario). Think step by step about each item.
+Write riskImagePrompt and safeImagePrompt in VERY DETAILED English using exact room details.
+ 
+Return ONLY this JSON:
 {
-  "summary": "one sentence",
-  "roomDesc": "brief description",
-  "riskImagePrompt": "English prompt for this room during earthquake for fal.ai",
-  "safeImagePrompt": "English prompt for this room safely rearranged for fal.ai",
-  "risks": [{"icon":"emoji","title":"...","desc":"...","severity":"high or medium"}],
-  "checklist": [{"text":"...","priority":"high or medium"}],
-  "shelter": {"best":"...","bestDesc":"...","second":"...","secondDesc":"...","third":"...","thirdDesc":"...","avoid":["...","...","...","..."]},
-  "riskMarkers": [{"label":"...","x":30,"y":40}],
-  "safeMarkers": [{"label":"...","x":30,"y":40}]
-}`;
+  "summary": "3-4 sentences about overall risk",
+  "roomDesc": "Brief room description for image generation",
+  "riskImagePrompt": "Very detailed English fal.ai prompt using room colors/furniture from description",
+  "safeImagePrompt": "Very detailed English fal.ai prompt for safe version of same room",
+  "risks": [{"icon":"emoji","title":"Specific risk","desc":"Why dangerous, 3-4 sentences with weight/height/anchoring details","severity":"high or medium"}],
+  "checklist": [{"text":"Specific action with tool/material needed","priority":"high or medium"}],
+  "shelter": {"best":"...","bestDesc":"2-3 sentences why safe","second":"...","secondDesc":"...","third":"...","thirdDesc":"...","avoid":["Spot — specific reason","...","...","..."]},
+  "riskMarkers": [{"label":"3-5 words","x":30,"y":40}],
+  "safeMarkers": [{"label":"3-5 words","x":30,"y":40}]
+}
  
-  const raw = await groqVision(systemPrompt, userPrompt, b64, mime);
-  return parseJsonFromText(raw);
+EXACTLY 5 risks (at least 3 "high"), 5 checklist, 3 riskMarkers, 3 safeMarkers.`;
+ 
+  const analysisMessages = [
+    { role: 'system', content: isTR
+      ? 'Sen deprem güvenliği uzmanısın. Verilen oda açıklamasına göre kapsamlı risk analizi yapıyorsun. SADECE JSON döndür.'
+      : 'You are an earthquake safety expert. Analyze the room description comprehensively. Return ONLY JSON.' },
+    { role: 'user', content: analysisPrompt }
+  ];
+ 
+  const analysisRaw = await groqChat(analysisMessages, {
+    model: GROQ_CHAT_MODEL,
+    temperature: 0.3,
+    max_tokens: 3000
+  });
+ 
+  if (!analysisRaw) {
+    console.error('[QR] STEP 2 FAILED: 70B model returned null');
+    return null;
+  }
+  console.log('[QR] STEP 2 OK: Analysis length:', analysisRaw.length);
+ 
+  const result = parseJsonFromText(analysisRaw);
+  if (result) {
+    result._roomDescription = roomDescription; // Save for chat context
+  }
+  return result;
 }
  
 // ── APPLY ANALYSIS TO DOM ──
@@ -1311,8 +1378,8 @@ async function startAnalysis() {
     const { base64: b64, mime: resizedMime } = await resizeImageForAPI(file, 1024);
     console.log('[QR] Sending to Groq vision, base64 length:', b64.length);
     // Animate steps while waiting
-    setTimeout(() => activateStep(1), 1200);
-    setTimeout(() => activateStep(2), 2500);
+    setTimeout(() => activateStep(1), 2000);
+    setTimeout(() => activateStep(2), 4500);
  
     aiData = await analyzeRoomWithAI(roomId, b64, resizedMime);
  
@@ -1376,10 +1443,11 @@ function buildRoomContext() {
   const allChecklist = a.checklist.map(c => `- ${c.t} (${c.p==='high'?'ÖNCELİKLİ':'ORTA'})`).join('\n');
   const avoidList = (a.shelter.avoid || []).map(x => `- ${x}`).join('\n');
  
+  const roomDesc = a._roomDescription || a.roomDesc || '';
   if (currentLang === 'tr') {
     return `KULLANICININ ODA ANALİZİ (fotoğraftan tespit edildi):
 Özet: ${a.summary}
-Oda açıklaması: ${a.roomDesc || 'Bilgi yok'}
+Detaylı oda açıklaması: ${roomDesc}
  
 TESPİT EDİLEN RİSKLER:
 ${allRisks}
@@ -1418,22 +1486,28 @@ async function sendChatMessage() {
  
   const roomCtx = buildRoomContext();
   const systemMsg = currentLang === 'tr'
-    ? `Sen QuakeReady uygulamasının deprem güvenliği uzmanı AI asistanısın.
+    ? `Sen QuakeReady uygulamasının deprem güvenliği uzmanı AI asistanısın. AFAD sertifikalı yapı mühendisisin.
  
-KURALLAR:
-- Kullanıcının odasını ZATEN analiz ettin, sonuçlar aşağıda.
-- Kullanıcı "fotoğrafımda ne var", "saklanma alanı neresi" derse analiz sonuçlarından SOMUT cevap ver.
-- Kısa, net, pratik Türkçe cevaplar ver. Emoji kullanabilirsin.
-- "Fotoğrafı göremiyorum" DEME çünkü analiz sonuçların var.
+KRİTİK KURALLAR:
+1. Kullanıcının odasını fotoğraftan DETAYLI analiz ettin. Tüm sonuçlar ve oda açıklaması aşağıda.
+2. Kullanıcı odası hakkında soru sorduğunda (fotoğraf, eşya, risk, güvenli alan vb.) analiz sonuçlarından SPESİFİK cevap ver.
+3. "Fotoğrafı göremiyorum" veya "görsel verilere erişemem" gibi şeyler ASLA SÖYLEME. Sen odayı zaten analiz ettin.
+4. Cevaplarında odadaki spesifik eşyalardan bahset (kitaplık, kanepe, TV vb.).
+5. Deprem güvenliği dışındaki sorulara kısaca yanıt ver ama ana konuya yönlendir.
+6. Her cevabı 3-5 cümle tut. Çok kısa veya çok uzun olma.
+7. Pratik, uygulanabilir tavsiyeler ver. Malzeme isimleri, mağaza önerileri, maliyet tahminleri ekle.
+8. Emoji kullanabilirsin ama abartma (cevap başına 1-2 tane yeter).
  
 ${roomCtx}`
-    : `You are QuakeReady AI earthquake safety expert.
+    : `You are QuakeReady AI earthquake safety expert, a certified structural engineer.
  
-RULES:
-- You ALREADY analyzed the user's room. Results are below.
-- When asked about their photo/room, give SPECIFIC answers from the analysis.
-- Never say "I can't see the photo" - you have the analysis results.
-- Be concise and practical.
+CRITICAL RULES:
+1. You ALREADY analyzed the user's room from their photo. Full results and room description below.
+2. When asked about their room/photo, give SPECIFIC answers from the analysis data.
+3. NEVER say "I can't see the photo" or "I don't have access to images". You analyzed the room already.
+4. Reference specific items from the room (bookshelf, sofa, TV etc.) in your answers.
+5. Keep answers 3-5 sentences. Practical, actionable advice.
+6. Include material names, store suggestions, cost estimates when relevant.
  
 ${roomCtx}`;
  
@@ -1446,7 +1520,7 @@ ${roomCtx}`;
   }
  
   try {
-    const reply = await groqChat(messages, { temperature: 0.5, max_tokens: 500 });
+    const reply = await groqChat(messages, { temperature: 0.4, max_tokens: 800 });
     removeTyping();
     if (reply) {
       addBotMessage(reply);
@@ -1719,7 +1793,6 @@ function setLang(lang) {
 }
  
 console.log('[QR] ✅ QuakeReady loaded with Groq AI');
-
 </script>
 </body>
 </html>
