@@ -796,7 +796,7 @@ h1 span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-
 
 <script>
 // ── API CONFIG (GROQ + FAL.AI) ──
-const GROQ_API_KEY = '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';
+const GROQ_API_KEY = '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';
 const GROQ_VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
 const GROQ_CHAT_MODEL = 'llama-3.3-70b-versatile';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -1317,7 +1317,7 @@ async function startAnalysis() {
 
   // Step 1: start animation
   function activateStep(idx) {
-    if (idx > 0) { const p = document.getElementById(steps[idx-1]); p.classList.remove('active'); p.classList.add('done'); p.querySelector('.step-icon').textContent = '✓'; }
+    if (idx > 0) { const p = document.getElementById(steps[idx-1]); if(p){p.classList.remove('active'); p.classList.add('done'); const icon = p.querySelector('span'); if(icon) icon.textContent = '✓';} }
     if (idx < steps.length) { document.getElementById(steps[idx]).classList.add('active'); }
   }
   activateStep(0);
@@ -1346,11 +1346,16 @@ async function startAnalysis() {
     await new Promise(r => setTimeout(r, 500));
   }
 
-  // Step 3: show results
-  applyAnalysisToDOM(roomId, aiData);
-  generateImages(roomLabel);
-  saveToHistory(roomId, aiData ? aiData.risks?.length || 5 : 5);
-  updateAccountUI();
+  // Step 3: show results (wrapped in try-catch to never get stuck)
+  try {
+    applyAnalysisToDOM(roomId, aiData);
+    generateImages(roomLabel);
+    saveToHistory(roomId, aiData ? aiData.risks?.length || 5 : 5);
+    updateAccountUI();
+  } catch(err) {
+    console.error('[QR] Error applying results:', err);
+    showToast(currentLang==='tr'?'⚠️ Bazı sonuçlar yüklenemedi':'⚠️ Some results failed to load');
+  }
   showScreen('screen-results');
 }
 
