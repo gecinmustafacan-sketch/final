@@ -1035,25 +1035,31 @@ ${roomDescription}
 GÖREV: 7.4 büyüklüğünde bir İstanbul depremi senaryosunda bu odayı analiz et.
 
 KRİTİK KURALLAR:
-1. Her risk için FARKLI ve SPESİFİK açıklama yaz. "Yüksekliği ve ağırlığı nedeniyle devrilme riski" gibi TEKRARLAYAN ifadeler KULLANMA.
-2. Her risk açıklaması şunları içermeli: (a) eşyanın TAHMİNİ boyut/ağırlık bilgisi, (b) NEREYE düşer/devrilir, (c) KİMİ/NEYİ tehlikeye atar, (d) yaralanma tipi (ezilme/kesik/çarpma)
-3. Checklist maddeleri somut olsun: malzeme adı, tahmini maliyet, nereden alınır, nasıl takılır
-4. Saklanma alanları odanın GERÇEk düzenine göre olsun
-5. riskImagePrompt: Oda açıklamasındaki mobilya renklerini, tiplerini, duvar rengini aynen kullan. Deprem anını çok canlı anlat.
-6. safeImagePrompt: Aynı odayı güvenli hale getirilmiş şekilde anlat. Aynı mobilyalar ama sabitlenmiş.
+1. Her risk için TAMAMEN FARKLI cümle yapısı kullan. Şu kalıbı ASLA TEKRARLAMA: "X, yaklaşık Ycm genişliğinde ve Zcm yüksekliğinde. 7.4 büyüklüğünde depremde..." — bu kalıbı 1 kereden fazla kullanırsan BAŞARISIZ sayılırsın.
+2. YASAKLI TEKRAR KALIPLARI: "kişiye ezilme veya kesik yaralanmaları verebilir", "kafa travmasına neden olabilir", "düşme anında kafa travmasına" — bunları her riskte tekrarlama. Her risk için FARKLI yaralanma senaryosu yaz.
+3. Her risk açıklaması 2-3 kısa cümle olsun (4-5 değil). İlk cümle eşyayı ve tehlikeyi tanımlasın. İkinci cümle sonucu anlatsın. Üçüncü cümle (opsiyonel) çözüm ipucu versin.
+4. Risk başlıkları kısa ve çarpıcı olsun: "Sabitlenmemiş Kitaplık", "Sallanan Avize", "Pencere Cam Riski" gibi.
+5. Checklist maddeleri somut: malzeme adı, tahmini maliyet (₺), nereden alınır
+6. Saklanma alanları odanın GERÇEK düzenine göre olsun
+7. riskImagePrompt: Oda açıklamasındaki mobilya renklerini aynen kullan. Deprem anını canlı anlat.
+8. safeImagePrompt: Aynı odayı güvenli hale getirilmiş şekilde anlat.
 
-Örnek iyi risk açıklaması: "Duvardaki 120cm genişliğindeki düz ekran TV, anti-tip kayışı olmadan TV sehpasında duruyor. 7.4 büyüklüğünde depremde TV öne doğru fırlayarak 2-3 metre uzağa düşebilir. Ekran kırılarak cam parçaları saçılır ve oturma alanındaki kişilere ciddi kesik yaralanmaları verebilir. TV'nin tahmini 15-20 kg ağırlığı düşme anında kafa travmasına neden olabilir."
+Örnek İYİ risk açıklamaları (HER BİRİ FARKLI YAPI KULLANMALI):
+- "Duvardaki düz ekran TV anti-tip kayışı olmadan sehpada duruyor. Depremde öne fırlayarak cam parçaları saçılabilir."
+- "Yüksek kitaplık duvara sabitlenmemiş. İlk sarsıntıda öne devrilip oturma alanını kapatabilir."
+- "Pencere büyük ve tek cam. Kırılarak keskin parçalar odanın her yerine yayılabilir."
 
-Örnek KÖTÜ risk açıklaması (BUNU YAZMA): "Televizyonun yüksekliği ve ağırlığı, sabitlenmemiş olması nedeniyle devrilme riski yüksek."
+Örnek KÖTÜ risk (BUNU ASLA YAZMA — tekrar eden şablon):
+"X, yaklaşık Ycm genişliğinde ve Zcm yüksekliğinde. 7.4 büyüklüğünde depremde... kişiye ezilme veya kesik yaralanmaları verebilir. Tahmini A-B kg ağırlığı, düşme anında kafa travmasına neden olabilir." — BU KALIP YASAK. Her risk 2-3 KISA ve BİRBİRİNDEN FARKLI cümle olsun.
 
 SADECE JSON döndür:
 {
-  "summary": "4-5 cümle. Odanın genel görünümü, en büyük 2-3 tehlike ve neden ciddi oldukları.",
+  "summary": "3-4 cümle. Odanın görünümü ve en büyük 2 tehlike.",
   "roomDesc": "Odanın 2-3 cümlelik açıklaması: mobilya tipleri, renkler, yerleşim düzeni",
   "riskImagePrompt": "IN ENGLISH ONLY. Start with room style/colors from description. Then describe earthquake damage in detail. Example format: 'A modern living room with gray L-shaped sofa and walnut wood TV console, during violent 7.4 earthquake, the tall bookshelf has tipped forward scattering books across the gray carpet, flat screen TV flung off the console lying face-down with cracked screen, glass coffee table shattered into pieces, curtain rod fallen from the wall, ceiling pendant light swinging wildly, fine dust and debris in the air, dramatic photorealistic interior photography'",
   "safeImagePrompt": "IN ENGLISH ONLY. Same room style but safe. Example: 'Same modern living room, tall bookshelf now anchored to wall with steel L-brackets visible, TV secured with anti-tip strap to wall mount, tempered glass coffee table replaced with rounded-edge wood table, heavy books moved to lower shelves, clear wide pathway to exit door, small emergency backpack placed near entrance, anti-slip pads under decorative items, clean organized safe interior photography'",
   "risks": [
-    {"icon": "📺", "title": "Eşyanın adı + risk tipi", "desc": "4-5 cümle. Eşyanın boyutu/ağırlığı, nereye düşer, kimi tehlikeye atar, yaralanma tipi. HER RİSK İÇİN FARKLI AÇIKLAMA.", "severity": "high veya medium"}
+    {"icon": "📺", "title": "Kısa ve çarpıcı başlık", "desc": "2-3 KISA cümle. Her risk BİRBİRİNDEN FARKLI yazılmalı.", "severity": "high veya medium"}
   ],
   "checklist": [
     {"text": "Eşya adı + aksiyon + malzeme + maliyet. Örnek: 'TV'yi duvara VESA uyumlu askı aparatı ile monte et (Tekzen/Koçtaş, ~150-300₺). Veya anti-tip kayışı kullan (~50-100₺)'", "priority": "high veya medium"}
